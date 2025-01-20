@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Hockey Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #scoreboard {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            font-size: 20px;
+            color: #333;
+        }
+
+        #scoreboard input {
+            padding: 5px;
+            font-size: 16px;
+            margin-left: 10px;
+        }
+
+        #scoreboard button {
+            padding: 5px 10px;
+            font-size: 16px;
+        }
+
+        #countdown {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: red;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="scoreboard">
+        Player 1: <span id="player1-name">You</span> - Score: <span id="player1-score">0</span>
+        Player 2: <span id="player2-name">Opponent</span> - Score: <span id="player2-score">0</span>
+        <div id="name-fields">
+            <input type="text" id="player1-input" placeholder="Player 1 name...">
+            <input type="text" id="player2-input" placeholder="Player 2 name...">
+            <button onclick="setNames()">Set Names</button>
+        </div>
+    </div>
+    <div id="countdown">3</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const scoreboard = document.getElementById("scoreboard");
+        const countdownElement = document.getElementById("countdown");
+
+        let player1Name = "You";
+        let player2Name = "Opponent";
+        let player1Score = 0;
+        let player2Score = 0;
+
+        const paddleWidth = 100;
+        const paddleHeight = 20;
+        const ballSize = 40;
+
+        let gamePaused = true;
+
+        const player1 = {
+            x: canvas.width / 2 - paddleWidth / 2,
+            y: canvas.height - paddleHeight - 150,
+            width: paddleWidth,
+            height: paddleHeight,
+            dx: 0,
+            dy: 0,
+        };
+
+        const player2 = {
+            x: canvas.width / 2 - paddleWidth / 2,
+            y: 150,
+            width: paddleWidth,
+            height: paddleHeight,
+            dx: 0,
+            dy: 0,
+        };
+
+        const balls = [
+            {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                width: ballSize,
+                height: ballSize,
+                dx: 0,
+                dy: 0,
+                rotation: 0,
+            },
+        ];
+
+        const ballImage = new Image();
+        ballImage.src = "logo.png";
+
+        function setNames() {
+            const player1Input = document.getElementById("player1-input").value;
+            const player2Input = document.getElementById("player2-input").value;
+
+            if (player1Input) player1Name = player1Input;
+            if (player2Input) player2Name = player2Input;
+
+            document.getElementById("player1-name").textContent = player1Name;
+            document.getElementById("player2-name").textContent = player2Name;
+
+            document.getElementById("name-fields").style.display = "none";
+        }
+
+        function drawRect(x, y, width, height, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, width, height);
+        }
+
+        function drawBall(ball) {
+            if (ballImage.complete && ballImage.naturalWidth > 0) {
+                ctx.save();
+                ctx.translate(ball.x + ball.width / 2, ball.y + ball.height / 2);
+                ctx.rotate(ball.rotation);
+                ctx.drawImage(ballImage, -ball.width / 2, -ball.height / 2, ball.width, ball.height);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = "black";
+                ctx.beginPath();
+                ctx.arc(ball.x + ball.width / 2, ball.y + ball.height / 2, ball.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawRect(player1.x, player1.y, player1.width, player1.height, "blue");
+            drawRect(player2.x, player2.y, player2.width, player2.height, "red");
+            balls.forEach(drawBall);
+        }
+
+        function moveBalls() {
+            if (gamePaused) return;
+
+            balls.forEach((ball) => {
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+                ball.rotation += 0.1;
+
+                if (ball.x <= 0 || ball.x + ball.width >= canvas.width) {
+                    ball.dx *= -1;
+                }
+
+                if (
+                    ball.y <= player2.y + player2.height &&
+                    ball.x + ball.width >= player2.x &&
+                    ball.x <= player2.x + player2.width
+                ) {
+                    ball.dy *= -1;
+                }
+
+                if (
+                    ball.y + ball.height >= player1.y &&
+                    ball.x + ball.width >= player1.x &&
+                    ball.x <= player1.x + player1.width
+                ) {
+                    ball.dy *= -1;
+                }
+
+                if (ball.y < 0) {
+                    player1Score++;
+                    resetBall(ball);
+                }
+
+                if (ball.y + ball.height > canvas.height) {
+                    player2Score++;
+                    resetBall(ball);
+                }
+            });
+        }
+
+        function resetBall(ball) {
+            ball.x = canvas.width / 2 - ball.width / 2;
+            ball.y = canvas.height / 2 - ball.height / 2;
+            ball.dx = 0;
+            ball.dy = 0;
+
+            gamePaused = true;
+            countdownElement.style.display = "block";
+            countdownElement.textContent = "3";
+            let count = 3;
+
+            const countdownInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownElement.textContent = count;
+                } else {
+                    clearInterval(countdownInterval);
+                    countdownElement.style.display = "none";
+                    launchBall(ball);
+                }
+            }, 1000);
+        }
+
+        function launchBall(ball) {
+            ball.dx = 5 * (Math.random() > 0.5 ? 1 : -1);
+            ball.dy = 5 * (Math.random() > 0.5 ? 1 : -1);
+            gamePaused = false;
+        }
+
+        function addNewBall() {
+            const newBall = {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                width: ballSize,
+                height: ballSize,
+                dx: 5 * (Math.random() > 0.5 ? 1 : -1),
+                dy: 5 * (Math.random() > 0.5 ? 1 : -1),
+                rotation: 0,
+            };
+            balls.push(newBall);
+        }
+
+        function movePlayer(player) {
+            player.x += player.dx;
+            player.y += player.dy;
+
+            player.x = Math.max(0, Math.min(player.x, canvas.width - player.width));
+            if (player === player1) {
+                player.y = Math.max(canvas.height / 2, Math.min(player.y, canvas.height - player.height));
+            } else {
+                player.y = Math.max(0, Math.min(player.y, canvas.height / 2 - player.height));
+            }
+        }
+
+        function update() {
+            draw();
+            moveBalls();
+            movePlayer(player1);
+            movePlayer(player2);
+            requestAnimationFrame(update);
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowLeft") player1.dx = -8;
+            if (e.key === "ArrowRight") player1.dx = 8;
+            if (e.key === "ArrowUp") player1.dy = -8;
+            if (e.key === "ArrowDown") player1.dy = 8;
+
+            if (e.key === "a") player2.dx = -8;
+            if (e.key === "d") player2.dx = 8;
+            if (e.key === "w") player2.dy = -8;
+            if (e.key === "s") player2.dy = 8;
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+                player1.dx = 0;
+                player1.dy = 0;
+            }
+            if (["a", "d", "w", "s"].includes(e.key)) {
+                player2.dx = 0;
+                player2.dy = 0;
+            }
+        });
+
+        setInterval(addNewBall, 30000); // Add a new ball every 30 seconds
+        resetBall(balls[0]);
+        update();
+    </script>
+</body>
+</html>
