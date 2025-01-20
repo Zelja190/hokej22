@@ -107,6 +107,7 @@
                 dx: 0,
                 dy: 0,
                 rotation: 0,
+                isScoringBall: true,
             },
         ];
 
@@ -181,14 +182,16 @@
                     ball.dy *= -1;
                 }
 
-                if (ball.y < 0) {
-                    player1Score++;
-                    resetBall(ball);
-                }
+                if (ball.isScoringBall) {
+                    if (ball.y < 0) {
+                        player1Score++;
+                        resetBall(ball);
+                    }
 
-                if (ball.y + ball.height > canvas.height) {
-                    player2Score++;
-                    resetBall(ball);
+                    if (ball.y + ball.height > canvas.height) {
+                        player2Score++;
+                        resetBall(ball);
+                    }
                 }
             });
         }
@@ -196,30 +199,8 @@
         function resetBall(ball) {
             ball.x = canvas.width / 2 - ball.width / 2;
             ball.y = canvas.height / 2 - ball.height / 2;
-            ball.dx = 0;
-            ball.dy = 0;
-
-            gamePaused = true;
-            countdownElement.style.display = "block";
-            countdownElement.textContent = "3";
-            let count = 3;
-
-            const countdownInterval = setInterval(() => {
-                count--;
-                if (count > 0) {
-                    countdownElement.textContent = count;
-                } else {
-                    clearInterval(countdownInterval);
-                    countdownElement.style.display = "none";
-                    launchBall(ball);
-                }
-            }, 1000);
-        }
-
-        function launchBall(ball) {
             ball.dx = 5 * (Math.random() > 0.5 ? 1 : -1);
             ball.dy = 5 * (Math.random() > 0.5 ? 1 : -1);
-            gamePaused = false;
         }
 
         function addNewBall() {
@@ -231,6 +212,7 @@
                 dx: 5 * (Math.random() > 0.5 ? 1 : -1),
                 dy: 5 * (Math.random() > 0.5 ? 1 : -1),
                 rotation: 0,
+                isScoringBall: false,
             };
             balls.push(newBall);
         }
